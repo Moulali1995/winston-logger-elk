@@ -1,11 +1,26 @@
 version: "3.2"
 
 services:
+  api:
+    build:
+      context: .
+    image: api
+    container_name: api-primary
+    env_file:
+      - .env
+    depends_on:
+      - elasticsearch
+    environment:
+      PORT: 4001
+    ports:
+      - "4001:4001"
+
   elasticsearch:
     build:
       context: ./elk_stack/elasticsearch/
       args:
         ELK_VERSION: $ELK_VERSION
+    container_name: elasticsearch
     volumes:
       - type: bind
         source: ./elk_stack/elasticsearch/config/elasticsearch.yml
@@ -32,6 +47,7 @@ services:
       args:
         ELK_VERSION: $ELK_VERSION
         ENVIRONMENT: $ENVIRONMENT
+    container_name: logstash
     volumes:
       - type: bind
         source: ./elk_stack/logstash/config/logstash.yml
@@ -60,6 +76,7 @@ services:
       context: ./elk_stack/kibana/
       args:
         ELK_VERSION: $ELK_VERSION
+    container_name: kibana
     volumes:
       - type: bind
         source: ./elk_stack/kibana/config/kibana.yml
