@@ -1,6 +1,7 @@
 // winston logger module for logging
-const winston = require("winston"); 
-const logstashTCP = require("./logstash")
+const winston = require("winston");
+const { LogstashTransport } = require("winston-logstash-transport");
+require("dotenv").config();
 //  Middleware - winston logging - API tracing - Before/After API call
 const logger = winston.createLogger({
   // winston format combine for multiple formats
@@ -9,36 +10,37 @@ const logger = winston.createLogger({
     winston.format.label({ label: "winston-logger" }),
     winston.format.timestamp(),
     winston.format.json(),
+    winston.format.prettyPrint(),
     winston.format.align()
   ),
   // Transport for exporting data
   transports: [
-    // logging in console
+    // console logger
     new winston.transports.Console(),
-
-    // logging into a file
-    // new winston.transports.File({
-    //     filename: 'combined.log',
-    //     level: 'info'
-    //   }),
-
-    /* we can also add custom transport such as logstashTCP for sending the logs to logstash using the winston logs */
+    // logstash logger
+    new LogstashTransport({
+      host: process.env.ELK_HOST,
+      port: process.env.ELK_PORT,
+    }),
+    // file logger
+    new winston.transports.File({
+        filename: 'combined.log',
+        level: 'info'
+      }),
   ],
 });
 
-module.exports =  function (req, res, next) {
-
-  var data1={
-    url: req.url,
-    method: req.method,
-    requestID: req.id,
-    requestBody: req.body,
-  },data2;
+const Middleware = function (req, res, next) {
+  var req_data = {
+      message: "Before call",
+      url: req.url,
+      method: req.method,
+      requestID: req.id,
+      requestBody: req.body,
+    },
+    res_data;
   // winston logger - Before API call
-  logger.info("Before call", data1);
-
-  // send logs to logstash
-   logstashTCP(data1)
+  logger.info(req_data);
 
   // listeners for response object
   var oldWrite = res.write,
@@ -51,24 +53,23 @@ module.exports =  function (req, res, next) {
     oldWrite.apply(res, arguments);
   };
 
-  res.end =  function (chunk) {
+  res.end = function (chunk) {
     if (chunk) chunks.push(new Buffer(chunk));
     var body = Buffer.concat(chunks).toString("utf8");
-     data2= {
+    res_data = {
+      message: "After call",
       url: req.url,
       method: req.method,
       requestID: req.id,
-      env:'development',
-      responseBody: Buffer.isBuffer(body) ? "file" : (body),
+      responseBody: Buffer.isBuffer(body) ? "file" : body,
       statusCode: res.statusCode,
-    }
+    };
     // winston logger - After API call
-    logger.info("After call",data2 );
-
-     // send logs to logstash
-     logstashTCP(data2)
+    logger.info(res_data);
 
     oldEnd.apply(res, arguments);
   };
   next();
 };
+
+module.exports = { Middleware, logger };

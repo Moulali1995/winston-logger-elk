@@ -1,34 +1,39 @@
 // express module
-const express = require('express');
+const express = require("express");
 // express instance
-const app= express();
+const app = express();
 
 const addRequestId = require("express-request-id")();
-const winstonMiddleware = require('./WinstonMiddleware')
-
+const { logger, Middleware } = require("./WinstonMiddleware");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // X-Request-Id header
-app.use(addRequestId)
+app.use(addRequestId);
 
 // ignore /favicon.ico requests
-app.use(function(req, res, next){
-  if (req.url === '/favicon.ico') {
-      res.writeHead(200, {'Content-Type': 'image/x-icon'} );
-      res.end();
+app.use(function (req, res, next) {
+  if (req.url === "/favicon.ico") {
+    res.writeHead(200, { "Content-Type": "image/x-icon" });
+    res.end();
   } else {
-      next();
+    next();
   }
-})
+});
 // winston logger middleware
-app.use(winstonMiddleware)
+app.use(Middleware);
 
+app.get("/log", (req, res) => {
+  console.log("this is not logged to file or elk");
+  // error log
+  logger.error("This is a error level log");
+  // warn log
+  logger.warn("This is a warn level log");
+  //info log
+  logger.info("This is a info level log");
+  res.send("welcome to winston logger!");
+});
 
-app.get("/log",(req,res)=>{
-  res.send("welcome to winston logger!")
-})
-
-app.listen(8088,()=>{
-  `Server started`
-})
+app.listen(8088, () => {
+  console.log(`Server started on port 8088`);
+});
