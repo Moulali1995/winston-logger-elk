@@ -19,5 +19,10 @@ Getting set up :+1:
 1. git clone <git-repo-url>
 2. cd <project-folder>
 3. npm i
+# start in local
 4. npm start
+# start conatiners in docker
+5. npm run dc:up
+# stop containers in docker
+6. npm run dc:down
 ```
