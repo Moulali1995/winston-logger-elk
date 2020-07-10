@@ -2,16 +2,50 @@
 const winston = require("winston");
 const { LogstashTransport } = require("winston-logstash-transport");
 require("dotenv").config();
+const lodash = require("lodash");
+
 //  Middleware - winston logging - API tracing - Before/After API call
+const customFormat = winston.format.printf((info) => {
+  let { level, message, label, timestamp, stack } = info;
+
+  if (lodash.isObject(message)) {
+    message = JSON.stringify(message);
+  }
+  /* This will get the data from splat object and 
+  then joins with the rest of the parameters
+  */
+  const args = info[Symbol.for("splat")] || [];
+  const strArgs = args
+    .map((value) => {
+      if (lodash.isObject(value)) {
+        return JSON.stringify(value);
+      }
+      return value;
+    })
+    .join(" ");
+
+  // *Check for the error instance and print the error stack trace.
+  if (info instanceof Error) {
+    // *print error stack trace
+    return `${timestamp} [${label}] ${level}: ${message} - ${stack}`;
+  }
+
+  return `${timestamp} [${label}] ${level}: ${message} ${strArgs}`;
+});
+
 const logger = winston.createLogger({
   // winston format combine for multiple formats
   format: winston.format.combine(
-    winston.format.errors({ stack: true }),
+    // * For complete error stack trace
+    // winston.format.errors({ stack: true }),
     winston.format.label({ label: "winston-logger" }),
     winston.format.timestamp(),
-    winston.format.json(),
-    winston.format.prettyPrint(),
-    winston.format.align()
+    // !Below formats are not useful when using custom format
+    // winston.format.json(),
+    // winston.format.prettyPrint(),
+    // winston.format.align(),
+    // winston.format.splat(),
+    customFormat
   ),
   // Transport for exporting data
   transports: [
@@ -24,9 +58,9 @@ const logger = winston.createLogger({
     }),
     // file logger
     new winston.transports.File({
-        filename: 'combined.log',
-        level: 'info'
-      }),
+      filename: "combined.log",
+      level: "info",
+    }),
   ],
 });
 
