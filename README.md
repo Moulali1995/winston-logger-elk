@@ -21,7 +21,7 @@ Getting set up :+1:
 3. npm i
 # start in local
 4. npm start
-# start conatiners in docker
+# start containers in docker
 5. npm run dc:up
 # stop containers in docker
 6. npm run dc:down
